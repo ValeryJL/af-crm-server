@@ -1,5 +1,7 @@
 package com.afcrm.server.model;
 
+import lombok.Builder;
+
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
