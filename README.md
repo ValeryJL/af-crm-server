@@ -40,7 +40,6 @@ This project is fully containerized. You only need **Docker** and **Docker Compo
     ### 🔐 Environment Variables Explained:
     - **`POSTGRES_*`**: Credentials for the isolated Docker PostgreSQL database.
     - **`DB_DOCKER_URL`**: JDBC bridge URL (`jdbc:postgresql://db:5432/af_crm_db`).
-    - **`ADMIN_EMAIL` & `ADMIN_PASSWORD`**: Auto-Seeder credentials for the master account.
     - **`JWT_SECRET`**: Signature key for JWT sessions. Generate with `openssl rand -hex 32`.
     - **`GOOGLE_CLIENT_ID`**: OAuth2 ID for Google Login verification.
 
