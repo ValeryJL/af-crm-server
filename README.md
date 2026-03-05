@@ -27,11 +27,23 @@ This project is fully containerized. You don't need to install Java or PostgreSQ
    ```
 
 2. **Setup Environment Variables:**
-    Create a `.env` file in the root directory (refer to `.env.example` if available) with your database credentials.
+    Create a `.env` file in the root directory (refer to `.env.example`).
+    
+    ### 🔐 Environment Variables Explained:
+    - **`POSTGRES_*`**: Credentials for the isolated Docker PostgreSQL database.
+    - **`DB_DOCKER_URL`**: The JDBC bridge URL (`jdbc:postgresql://db:5432/af_crm_db`) allowing the Spring Boot container to talk to the Database container.
+    - **`ADMIN_EMAIL` & `ADMIN_PASSWORD`**: The Auto-Seeder uses these to create your initial Master Administrator account on the very first boot. Passwords are automatically BCrypt-hashed.
+    - **`JWT_SECRET`**: A highly secure, long Base64 string. The server uses this cryptographic key to "sign" and "verify" user sessions (JSON Web Tokens). If someone tampers with a token, the secret won't match and the server rejects it. 
+      > 🔑 **Important:** Do NOT use a hardcoded secret. Generate one securely by running this command in your terminal: 
+      > ```bash
+      > openssl rand -hex 32
+      > ```
+      > Paste the output directly into your `.env` file as `JWT_SECRET`.
+    - **`GOOGLE_CLIENT_ID`**: Your OAuth2 Google Cloud ID. Our backend needs this to mathematically verify that the "Sign in with Google" `idToken` sent by the Frontend truly belongs to your organization and hasn't been spoofed.
 
-3. **Run the entire stack:**
+3. **Run the entire stack for Deployment:**
     ```bash
-    docker-compose up --build
+    docker-compose up --build -d
     ```
     The API will be available at `http://localhost:8080` and the database at port `5432`.
 
