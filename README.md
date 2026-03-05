@@ -2,27 +2,35 @@
 
 A professional backend solution for managing technical service teams, task scheduling, and resource allocation. Designed to streamline operations for technical service providers using a modern, containerized architecture.
 
+## 🔗 Related Projects
+* **Frontend:** [af-crm-client](https://github.com/valeryjl/af-crm-client)
+
 ## 🛠️ Tech Stack
-* **Framework:** Spring Boot 3.x
+* **Framework:** Spring Boot 4.x
 * **Language:** Java 21 (LTS)
 * **Database:** PostgreSQL 16
 * **Containerization:** Docker & Docker Compose
 * **Persistence:** Spring Data JPA / Hibernate
-* **Build Tool:** Maven
+* **Documentation:** Swagger/OpenAPI 3
 
-## 📋 Key Features (Planned)
-- **Team Management:** CRUD operations for technical teams and specialty tracking.
-- **Service Scheduling:** Weekly calendar integration for service assignment and field coordination.
-- **Task Tracking:** Real-time status updates and reporting for technical tasks.
-- **RESTful API:** Clean, documented, and secure endpoints for frontend consumption.
+## 📋 Key Features
+- **User Unification:** Unified model for Admins and Technicians with preference tracking (`theme`, `customConfiguration`).
+- **Service Scheduling:** Automate task generation and calendar management.
+- **Task Tracking:** Real-time reporting and status updates for technical services.
+- **Interactive Documentation:** Native Swagger UI for effortless API exploration and testing.
+
+## 📖 API Documentation
+Once the server is running, you can access the documentation at:
+- **Swagger UI:** `http://localhost:8080/swagger-ui/index.html`
+- **OpenAPI Docs:** `http://localhost:8080/v3/api-docs`
 
 ## ⚙️ Quick Start (Docker)
 
-This project is fully containerized. You don't need to install Java or PostgreSQL locally, only **Docker** and **Docker Compose**.
+This project is fully containerized. You only need **Docker** and **Docker Compose**.
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/valeria-jauregui/af-crm-server.git
+   git clone https://github.com/ValeryJL/af-crm-server.git
    cd af-crm-server
    ```
 
@@ -31,26 +39,20 @@ This project is fully containerized. You don't need to install Java or PostgreSQ
     
     ### 🔐 Environment Variables Explained:
     - **`POSTGRES_*`**: Credentials for the isolated Docker PostgreSQL database.
-    - **`DB_DOCKER_URL`**: The JDBC bridge URL (`jdbc:postgresql://db:5432/af_crm_db`) allowing the Spring Boot container to talk to the Database container.
-    - **`ADMIN_EMAIL` & `ADMIN_PASSWORD`**: The Auto-Seeder uses these to create your initial Master Administrator account on the very first boot. Passwords are automatically BCrypt-hashed.
-    - **`JWT_SECRET`**: A highly secure, long Base64 string. The server uses this cryptographic key to "sign" and "verify" user sessions (JSON Web Tokens). If someone tampers with a token, the secret won't match and the server rejects it. 
-      > 🔑 **Important:** Do NOT use a hardcoded secret. Generate one securely by running this command in your terminal: 
-      > ```bash
-      > openssl rand -hex 32
-      > ```
-      > Paste the output directly into your `.env` file as `JWT_SECRET`.
-    - **`GOOGLE_CLIENT_ID`**: Your OAuth2 Google Cloud ID. Our backend needs this to mathematically verify that the "Sign in with Google" `idToken` sent by the Frontend truly belongs to your organization and hasn't been spoofed.
+    - **`DB_DOCKER_URL`**: JDBC bridge URL (`jdbc:postgresql://db:5432/af_crm_db`).
+    - **`ADMIN_EMAIL` & `ADMIN_PASSWORD`**: Auto-Seeder credentials for the master account.
+    - **`JWT_SECRET`**: Signature key for JWT sessions. Generate with `openssl rand -hex 32`.
+    - **`GOOGLE_CLIENT_ID`**: OAuth2 ID for Google Login verification.
 
-3. **Run the entire stack for Deployment:**
+3. **Run the entire stack:**
     ```bash
-    docker-compose up --build -d
+    docker compose up --build -d
     ```
-    The API will be available at `http://localhost:8080` and the database at port `5432`.
+    The API will be available at `http://localhost:8080`.
 
 ## 📂 Project Structure
 
 - `/backend`: Spring Boot source code and Dockerfile.
-
 - `docker-compose.yml`: Orchestration for the API and PostgreSQL.
 
 ---
