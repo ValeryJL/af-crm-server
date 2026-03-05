@@ -1,7 +1,7 @@
-package com.afcrm.server.controller;
-
+import com.afcrm.server.dto.UserDto;
 import com.afcrm.server.model.User;
 import com.afcrm.server.repository.UserRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')") // RBAC Restricts entire controller to ADMIN only
+@PreAuthorize("hasRole('ADMIN')")
 public class UserController {
 
     private final UserRepository userRepository;
@@ -25,11 +25,23 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
-            return ResponseEntity.badRequest().build();
+    public ResponseEntity<?> createUser(@Valid @RequestBody UserDto userDto) {
+        if (userRepository.existsByEmail(userDto.getEmail())) {
+            return ResponseEntity.badRequest().body("Email already exists");
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        
+        User user = User.builder()
+                .email(userDto.getEmail())
+                .password(passwordEncoder.encode(userDto.getPassword()))
+                .role(userDto.getRole())
+                .nombre(userDto.getNombre())
+                .apellido(userDto.getApellido())
+                .telefono(userDto.getTelefono())
+                .status(userDto.getStatus())
+                .theme(userDto.getTheme() != null ? userDto.getTheme() : "light")
+                .customConfiguration(userDto.getCustomConfiguration())
+                .build();
+                
         return ResponseEntity.ok(userRepository.save(user));
     }
 }

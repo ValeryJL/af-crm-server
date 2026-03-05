@@ -28,7 +28,15 @@ public class User extends AuditableEntity {
     @Column(nullable = false)
     private Role role;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "technician_id")
-    private Technician technician;
+    private String nombre;
+    private String apellido;
+
+    private String telefono;
+    private String status; // ACTIVE, INACTIVE, etc.
+
+    @Builder.Default
+    private String theme = "light";
+
+    @Column(columnDefinition = "text")
+    private String customConfiguration;
 }

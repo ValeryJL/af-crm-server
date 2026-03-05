@@ -41,8 +41,8 @@ public class ServiceReport extends AuditableEntity {
     private ScheduledTask scheduledTask;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tecnicos_id")
-    private Technician technician;
+    @JoinColumn(name = "user_id") // Renamed from tecnicos_id for clarity
+    private User user;
 
     @ManyToMany
     @JoinTable(

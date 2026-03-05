@@ -11,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Slf4j
-@Component
+// @Component
 @RequiredArgsConstructor
 public class AdminSeeder implements CommandLineRunner {
 
@@ -33,6 +33,8 @@ public class AdminSeeder implements CommandLineRunner {
                     .email(adminEmail)
                     .password(passwordEncoder.encode(adminPassword))
                     .role(Role.ADMIN)
+                    .nombre("Admin")
+                    .apellido("AF-CRM")
                     .build();
 
             userRepository.save(admin);
