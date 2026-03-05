@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EventualTaskRepository extends JpaRepository<EventualTask, Long> {
+    long countByStatus(com.afcrm.server.model.TaskStatus status);
 }

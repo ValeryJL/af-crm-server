@@ -2,10 +2,14 @@ package com.afcrm.server.controller;
 
 import com.afcrm.server.dto.AuthRequest;
 import com.afcrm.server.dto.AuthResponse;
+import com.afcrm.server.dto.UserDto;
 import com.afcrm.server.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -15,7 +19,17 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/register-admin")
+    public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody UserDto request) {
+        return ResponseEntity.ok(authService.registerAdmin(request));
+    }
+
+    @GetMapping("/setup-status")
+    public ResponseEntity<?> getSetupStatus() {
+        return ResponseEntity.ok(Collections.singletonMap("setupRequired", authService.isSetupRequired()));
     }
 }

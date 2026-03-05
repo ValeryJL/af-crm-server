@@ -24,6 +24,9 @@ public class EventualTask extends AuditableEntity {
     private LocalDate fecha;
     private String adjuntos;
 
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "servicios_id")
     private Service service;
