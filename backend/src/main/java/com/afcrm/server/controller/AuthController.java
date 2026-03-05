@@ -1,6 +1,7 @@
 package com.afcrm.server.controller;
 
 import com.afcrm.server.dto.AuthRequest;
+import com.afcrm.server.dto.GoogleLoginRequest;
 import com.afcrm.server.dto.AuthResponse;
 import com.afcrm.server.dto.UserDto;
 import com.afcrm.server.service.AuthService;
@@ -21,6 +22,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
+        return ResponseEntity.ok(authService.loginWithGoogle(request));
     }
 
     @PostMapping("/register-admin")

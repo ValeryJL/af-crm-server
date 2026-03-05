@@ -37,6 +37,9 @@ public class User extends AuditableEntity {
     @Builder.Default
     private String theme = "light";
 
+    @Builder.Default
+    private boolean oauthEnabled = true;
+
     @Column(columnDefinition = "text")
     private String customConfiguration;
 }

@@ -14,7 +14,6 @@ public class AuthRequest {
     @NotBlank(message = "Email is required")
     private String email;
 
+    @NotBlank(message = "Password is required")
     private String password;
-
-    private String idToken; // For Google OAuth2 validation
 }

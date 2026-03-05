@@ -1,6 +1,7 @@
 package com.afcrm.server.service;
 
 import com.afcrm.server.dto.AuthRequest;
+import com.afcrm.server.dto.GoogleLoginRequest;
 import com.afcrm.server.dto.AuthResponse;
 import com.afcrm.server.dto.UserDto;
 import com.afcrm.server.model.Role;
@@ -34,54 +35,59 @@ public class AuthService {
     private String googleClientId;
 
     public AuthResponse login(AuthRequest request) {
-        if (request.getIdToken() != null && !request.getIdToken().isEmpty()) {
-            try {
-                GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
-                        .setAudience(Collections.singletonList(googleClientId))
-                        .build();
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+        var user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow();
+        var jwtToken = jwtService.generateToken(new CustomUserDetails(user));
+        return new AuthResponse(jwtToken);
+    }
 
-                GoogleIdToken idToken = verifier.verify(request.getIdToken());
-                if (idToken != null) {
-                    GoogleIdToken.Payload payload = idToken.getPayload();
-                    String email = payload.getEmail();
+    public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
 
-                    User user = userRepository.findByEmail(email).orElseGet(() -> {
-                        // Auto-register new Google user as TECHNICIAN
-                        String name = (String) payload.get("name");
-                        String givenName = (String) payload.get("given_name");
-                        String familyName = (String) payload.get("family_name");
+            GoogleIdToken idToken = verifier.verify(request.getIdToken());
+            if (idToken != null) {
+                GoogleIdToken.Payload payload = idToken.getPayload();
+                String email = payload.getEmail();
 
-                        User newUser = User.builder()
-                                .email(email)
-                                .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Random password for social users
-                                .role(Role.TECH)
-                                .nombre(givenName != null ? givenName : (name != null ? name : "Google"))
-                                .apellido(familyName != null ? familyName : "User")
-                                .status("ACTIVE")
-                                .theme("light")
-                                .build();
-                        return userRepository.save(newUser);
-                    });
+                User user = userRepository.findByEmail(email).orElseGet(() -> {
+                    // Auto-register new Google user as TECH
+                    String name = (String) payload.get("name");
+                    String givenName = (String) payload.get("given_name");
+                    String familyName = (String) payload.get("family_name");
 
-                    String jwtToken = jwtService.generateToken(new CustomUserDetails(user));
-                    return new AuthResponse(jwtToken);
-                } else {
-                    throw new RuntimeException("Invalid Google ID Token");
+                    User newUser = User.builder()
+                            .email(email)
+                            .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Random password for social users
+                            .role(Role.TECH)
+                            .nombre(givenName != null ? givenName : (name != null ? name : "Google"))
+                            .apellido(familyName != null ? familyName : "User")
+                            .status("ACTIVE")
+                            .theme("light")
+                            .oauthEnabled(true) // Explicitly enable for auto-registered users
+                            .build();
+                    return userRepository.save(newUser);
+                });
+
+                if (!user.isOauthEnabled()) {
+                    throw new RuntimeException("Google authentication is disabled for this account");
                 }
-            } catch (Exception e) {
-                throw new RuntimeException("Google Authentication Failed: " + e.getMessage());
+
+                String jwtToken = jwtService.generateToken(new CustomUserDetails(user));
+                return new AuthResponse(jwtToken);
+            } else {
+                throw new RuntimeException("Invalid Google ID Token");
             }
-        } else {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getEmail(),
-                            request.getPassword()
-                    )
-            );
-            var user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow();
-            var jwtToken = jwtService.generateToken(new CustomUserDetails(user));
-            return new AuthResponse(jwtToken);
+        } catch (Exception e) {
+            throw new RuntimeException("Google Authentication Failed: " + e.getMessage());
         }
     }
 
@@ -105,7 +111,7 @@ public class AuthService {
         userRepository.save(user);
 
         // Auto-login after registration
-        return login(new AuthRequest(request.getEmail(), request.getPassword(), null));
+        return login(new AuthRequest(request.getEmail(), request.getPassword()));
     }
 
     public boolean isSetupRequired() {

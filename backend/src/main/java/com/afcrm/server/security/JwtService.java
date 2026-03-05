@@ -38,6 +38,8 @@ public class JwtService {
             claims.put("nombre", user.getNombre());
             claims.put("apellido", user.getApellido());
             claims.put("name", user.getNombre() + " " + user.getApellido()); // Generic name claim
+            claims.put("theme", user.getTheme());
+            claims.put("oauthEnabled", user.isOauthEnabled());
         }
         return generateToken(claims, userDetails);
     }
