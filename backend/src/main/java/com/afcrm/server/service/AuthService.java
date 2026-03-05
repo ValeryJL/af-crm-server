@@ -45,7 +45,24 @@ public class AuthService {
                     GoogleIdToken.Payload payload = idToken.getPayload();
                     String email = payload.getEmail();
 
-                    User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not registered in system"));
+                    User user = userRepository.findByEmail(email).orElseGet(() -> {
+                        // Auto-register new Google user as TECHNICIAN
+                        String name = (String) payload.get("name");
+                        String givenName = (String) payload.get("given_name");
+                        String familyName = (String) payload.get("family_name");
+
+                        User newUser = User.builder()
+                                .email(email)
+                                .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString())) // Random password for social users
+                                .role(Role.TECH)
+                                .nombre(givenName != null ? givenName : (name != null ? name : "Google"))
+                                .apellido(familyName != null ? familyName : "User")
+                                .status("ACTIVE")
+                                .theme("light")
+                                .build();
+                        return userRepository.save(newUser);
+                    });
+
                     String jwtToken = jwtService.generateToken(new CustomUserDetails(user));
                     return new AuthResponse(jwtToken);
                 } else {
