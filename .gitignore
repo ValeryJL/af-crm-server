@@ -35,3 +35,7 @@ replay_pid*
 # Environment Secrets
 .env
 .env.local
+# Project Data and Documentation
+datos.json
+project brief.md
+*.resolved
