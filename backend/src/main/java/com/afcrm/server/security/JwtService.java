@@ -1,5 +1,6 @@
 package com.afcrm.server.security;
 
+import com.afcrm.server.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -30,7 +31,15 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        Map<String, Object> claims = new HashMap<>();
+        if (userDetails instanceof CustomUserDetails customUserDetails) {
+            User user = customUserDetails.getUser();
+            claims.put("role", user.getRole().name());
+            claims.put("nombre", user.getNombre());
+            claims.put("apellido", user.getApellido());
+            claims.put("name", user.getNombre() + " " + user.getApellido()); // Generic name claim
+        }
+        return generateToken(claims, userDetails);
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {

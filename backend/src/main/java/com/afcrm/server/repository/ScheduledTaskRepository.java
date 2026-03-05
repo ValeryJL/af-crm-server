@@ -11,4 +11,5 @@ import java.util.List;
 public interface ScheduledTaskRepository extends JpaRepository<ScheduledTask, Long> {
     List<ScheduledTask> findByServiceAndScheduledDateAfter(Service service, java.time.LocalDate date);
     List<ScheduledTask> findByScheduledDateBetween(java.time.LocalDate start, java.time.LocalDate end);
+    long countByStatus(com.afcrm.server.model.TaskStatus status);
 }
