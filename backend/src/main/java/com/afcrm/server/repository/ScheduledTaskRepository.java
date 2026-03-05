@@ -7,9 +7,14 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+import jakarta.transaction.Transactional;
+
 @Repository
 public interface ScheduledTaskRepository extends JpaRepository<ScheduledTask, Long> {
     List<ScheduledTask> findByServiceAndScheduledDateAfter(Service service, java.time.LocalDate date);
     List<ScheduledTask> findByScheduledDateBetween(java.time.LocalDate start, java.time.LocalDate end);
     long countByStatus(com.afcrm.server.model.TaskStatus status);
+
+    @Transactional
+    void deleteByService(Service service);
 }

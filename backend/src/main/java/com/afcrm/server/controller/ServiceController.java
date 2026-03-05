@@ -22,6 +22,7 @@ public class ServiceController {
     private final ServiceRepository serviceRepository;
     private final GroupRepository groupRepository;
     private final SchedulingService schedulingService;
+    private final com.afcrm.server.repository.ScheduledTaskRepository scheduledTaskRepository;
 
     @GetMapping
     public List<ServiceDto> getAll() {
@@ -53,11 +54,16 @@ public class ServiceController {
     public ResponseEntity<ServiceDto> update(@PathVariable Long id, @RequestBody ServiceDto dto) {
         return serviceRepository.findById(id)
                 .map(service -> {
+                    boolean wasInactive = service.getBaja() != null;
                     mapToEntity(dto, service);
                     Service updated = serviceRepository.save(service);
-                    // In a real scenario we'd re-calculate or update pending tasks here
                     if (updated.getBaja() != null) {
+                        // Deactivating: cancel future pending tasks
                         schedulingService.deactivateService(updated, updated.getBaja());
+                    } else if (wasInactive) {
+                        // Reactivating: delete old cancelled tasks and regenerate schedule
+                        scheduledTaskRepository.deleteByService(updated);
+                        schedulingService.generateTasksForService(updated, 12);
                     }
                     return ResponseEntity.ok(mapToDto(updated));
                 })
@@ -67,9 +73,12 @@ public class ServiceController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!serviceRepository.existsById(id)) return ResponseEntity.notFound().build();
-        serviceRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        return serviceRepository.findById(id).map(service -> {
+            // Delete all child tasks first to avoid FK constraint
+            scheduledTaskRepository.deleteByService(service);
+            serviceRepository.delete(service);
+            return ResponseEntity.noContent().<Void>build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     private void mapToEntity(ServiceDto dto, Service service) {
