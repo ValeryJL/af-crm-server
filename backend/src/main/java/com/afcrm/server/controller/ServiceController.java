@@ -2,6 +2,7 @@ package com.afcrm.server.controller;
 
 import com.afcrm.server.dto.ServiceDto;
 import com.afcrm.server.model.Service;
+import com.afcrm.server.model.ServiceFrequency;
 import com.afcrm.server.repository.GroupRepository;
 import com.afcrm.server.repository.ServiceRepository;
 import com.afcrm.server.service.SchedulingService;
@@ -54,21 +55,22 @@ public class ServiceController {
     public ResponseEntity<ServiceDto> update(@PathVariable Long id, @RequestBody ServiceDto dto) {
         return serviceRepository.findById(id)
                 .map(service -> {
+                    ServiceFrequency oldFreq = service.getFrecuencia();
                     boolean wasInactive = service.getBaja() != null;
                     mapToEntity(dto, service);
                     Service updated = serviceRepository.save(service);
                     if (updated.getBaja() != null) {
                         // Deactivating: cancel future pending tasks
                         schedulingService.deactivateService(updated, updated.getBaja());
-                    } else if (wasInactive) {
-                        // Reactivating: delete old cancelled tasks and regenerate schedule
-                        scheduledTaskRepository.deleteByService(updated);
-                        schedulingService.generateTasksForService(updated, 12);
+                    } else if (wasInactive || (oldFreq != updated.getFrecuencia())) {
+                        // Reactivating or frequency changed: regenerate schedule
+                        schedulingService.rescheduleService(updated, 12);
                     }
                     return ResponseEntity.ok(mapToDto(updated));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
+
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
@@ -85,10 +87,14 @@ public class ServiceController {
         service.setNombre(dto.getNombre());
         service.setDireccion(dto.getDireccion());
         service.setTipo(dto.getTipo());
-        service.setFrecuencia(dto.getFrecuencia());
+        
+        service.setFrecuencia(ServiceFrequency.fromString(dto.getFrecuencia()));
+
         service.setObservaciones(dto.getObservaciones());
         service.setPlanilla(dto.getPlanilla());
         service.setCliente(dto.getCliente());
+        service.setContactos(dto.getContactos());
+        service.setRequerimientos(dto.getRequerimientos());
         service.setAlta(dto.getAlta() != null ? dto.getAlta() : LocalDate.now());
         service.setBaja(dto.getBaja());
 
@@ -103,10 +109,12 @@ public class ServiceController {
         dto.setNombre(service.getNombre());
         dto.setDireccion(service.getDireccion());
         dto.setTipo(service.getTipo());
-        dto.setFrecuencia(service.getFrecuencia());
+        dto.setFrecuencia(service.getFrecuencia() != null ? service.getFrecuencia().getValue() : null);
         dto.setObservaciones(service.getObservaciones());
         dto.setPlanilla(service.getPlanilla());
         dto.setCliente(service.getCliente());
+        dto.setContactos(service.getContactos());
+        dto.setRequerimientos(service.getRequerimientos());
         dto.setAlta(service.getAlta());
         dto.setBaja(service.getBaja());
         if (service.getGroup() != null) {

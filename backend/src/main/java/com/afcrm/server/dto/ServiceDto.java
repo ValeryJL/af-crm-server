@@ -14,6 +14,8 @@ public class ServiceDto {
     private String observaciones;
     private String planilla;
     private String cliente;
+    private String contactos;
+    private String requerimientos;
     private LocalDate alta;
     private LocalDate baja;
     private Long groupId;

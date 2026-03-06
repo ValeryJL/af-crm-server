@@ -24,10 +24,14 @@ public class Service extends AuditableEntity {
     private String nombre;
     private String direccion;
     private String tipo;
-    private String frecuencia;
+    @Enumerated(EnumType.STRING)
+    private ServiceFrequency frecuencia;
     private String observaciones;
     private String planilla;
     private String cliente;
+    private String contactos;
+    @Column(name = "requerimientos_especificos", length = 1000)
+    private String requerimientos;
 
     private LocalDate alta;
     private LocalDate baja;

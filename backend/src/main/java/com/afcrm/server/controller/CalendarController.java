@@ -1,7 +1,9 @@
 package com.afcrm.server.controller;
 
+import com.afcrm.server.dto.CalendarEventDto;
 import com.afcrm.server.dto.CalendarFormDataDto;
 import com.afcrm.server.dto.CalendarTaskDto;
+import com.afcrm.server.dto.BulkStatusUpdateRequest;
 import com.afcrm.server.dto.EventualTaskRequest;
 import com.afcrm.server.model.EventualTask;
 import com.afcrm.server.model.ScheduledTask;
@@ -10,13 +12,18 @@ import com.afcrm.server.model.TaskType;
 import com.afcrm.server.repository.EventualTaskRepository;
 import com.afcrm.server.repository.ScheduledTaskRepository;
 import com.afcrm.server.repository.ServiceRepository;
+import com.afcrm.server.service.CalendarEventService;
+import com.afcrm.server.service.SchedulingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -27,9 +34,12 @@ public class CalendarController {
     private final ScheduledTaskRepository scheduledTaskRepository;
     private final EventualTaskRepository eventualTaskRepository;
     private final ServiceRepository serviceRepository;
+    private final CalendarEventService calendarEventService;
+    private final SchedulingService schedulingService;
 
     @GetMapping
     public List<CalendarTaskDto> getTasks(
+
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
         
@@ -65,7 +75,7 @@ public class CalendarController {
                 .orElse(ResponseEntity.badRequest().build());
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/tasks/{id}")
     public ResponseEntity<CalendarTaskDto> updateStatus(@PathVariable Long id, @RequestBody java.util.Map<String, String> updates) {
         return scheduledTaskRepository.findById(id)
                 .map(task -> {
@@ -78,6 +88,16 @@ public class CalendarController {
                     return ResponseEntity.ok(mapToDto(scheduledTaskRepository.save(task)));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/tasks/{id}/reprogram")
+    public ResponseEntity<Void> reprogramTask(@PathVariable Long id, @RequestBody java.util.Map<String, String> payload) {
+        if (!payload.containsKey("newDate")) {
+            return ResponseEntity.badRequest().build();
+        }
+        LocalDate newDate = LocalDateTime.parse(payload.get("newDate").replace("Z", "")).toLocalDate();
+        schedulingService.reprogramTask(id, newDate);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/form-data")
@@ -96,6 +116,12 @@ public class CalendarController {
                             .build());
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/tasks/bulk-status")
+    public ResponseEntity<Void> bulkUpdateStatus(@RequestBody BulkStatusUpdateRequest request) {
+        schedulingService.bulkUpdateStatus(request.getIds(), request.getStatus());
+        return ResponseEntity.ok().build();
     }
 
     private CalendarTaskDto mapToDto(ScheduledTask task) {
