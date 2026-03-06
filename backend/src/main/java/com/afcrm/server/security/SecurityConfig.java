@@ -42,7 +42,7 @@ public class SecurityConfig {
                     "/swagger-resources/**",
                     "/webjars/**"
                 ).permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/users/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/users/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

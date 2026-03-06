@@ -3,6 +3,7 @@ package com.afcrm.server.controller;
 import com.afcrm.server.dto.AuthRequest;
 import com.afcrm.server.dto.GoogleLoginRequest;
 import com.afcrm.server.dto.AuthResponse;
+import com.afcrm.server.dto.RegisterInvitedRequest;
 import com.afcrm.server.dto.UserDto;
 import com.afcrm.server.service.AuthService;
 import jakarta.validation.Valid;
@@ -32,6 +33,11 @@ public class AuthController {
     @PostMapping("/register-admin")
     public ResponseEntity<AuthResponse> registerAdmin(@Valid @RequestBody UserDto request) {
         return ResponseEntity.ok(authService.registerAdmin(request));
+    }
+
+    @PostMapping("/register-invited")
+    public ResponseEntity<AuthResponse> registerInvited(@Valid @RequestBody RegisterInvitedRequest request) {
+        return ResponseEntity.ok(authService.registerInvited(request));
     }
 
     @GetMapping("/setup-status")

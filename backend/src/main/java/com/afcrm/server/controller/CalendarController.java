@@ -52,7 +52,7 @@ public class CalendarController {
     }
 
     @PostMapping("/eventual")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<CalendarTaskDto> createEventual(@RequestBody EventualTaskRequest request) {
         return serviceRepository.findById(request.getServiceId())
                 .map(service -> {

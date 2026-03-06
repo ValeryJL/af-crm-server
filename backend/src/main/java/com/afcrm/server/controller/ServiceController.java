@@ -41,7 +41,7 @@ public class ServiceController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ServiceDto create(@RequestBody ServiceDto dto) {
         Service service = new Service();
         mapToEntity(dto, service);
@@ -51,7 +51,7 @@ public class ServiceController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ServiceDto> update(@PathVariable Long id, @RequestBody ServiceDto dto) {
         return serviceRepository.findById(id)
                 .map(service -> {
@@ -73,7 +73,7 @@ public class ServiceController {
 
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         return serviceRepository.findById(id).map(service -> {
             // Delete all child tasks first to avoid FK constraint

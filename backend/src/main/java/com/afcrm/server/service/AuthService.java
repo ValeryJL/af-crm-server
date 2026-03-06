@@ -3,9 +3,12 @@ package com.afcrm.server.service;
 import com.afcrm.server.dto.AuthRequest;
 import com.afcrm.server.dto.GoogleLoginRequest;
 import com.afcrm.server.dto.AuthResponse;
+import com.afcrm.server.dto.RegisterInvitedRequest;
 import com.afcrm.server.dto.UserDto;
+import com.afcrm.server.model.Invitation;
 import com.afcrm.server.model.Role;
 import com.afcrm.server.model.User;
+import com.afcrm.server.repository.InvitationRepository;
 import com.afcrm.server.repository.UserRepository;
 import com.afcrm.server.security.CustomUserDetails;
 import com.afcrm.server.security.JwtService;
@@ -20,6 +23,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 
 @Service
@@ -27,6 +31,7 @@ import java.util.Collections;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final InvitationRepository invitationRepository;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final PasswordEncoder passwordEncoder;
@@ -99,7 +104,7 @@ public class AuthService {
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.ADMIN)
+                .role(Role.SUPER_ADMIN)
                 .nombre(request.getNombre())
                 .apellido(request.getApellido())
                 .telefono(request.getTelefono())
@@ -114,7 +119,43 @@ public class AuthService {
         return login(new AuthRequest(request.getEmail(), request.getPassword()));
     }
 
+    public AuthResponse registerInvited(RegisterInvitedRequest request) {
+        Invitation invitation = invitationRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new RuntimeException("Invalid invitation token"));
+
+        if (invitation.isUsed()) {
+            throw new RuntimeException("Invitation token already used");
+        }
+
+        if (invitation.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("Invitation token expired");
+        }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(invitation.getRole())
+                .nombre(request.getNombre())
+                .apellido(request.getApellido())
+                .telefono(request.getTelefono())
+                .status("ACTIVE")
+                .theme("light")
+                .oauthEnabled(true)
+                .build();
+
+        userRepository.save(user);
+
+        invitation.setUsed(true);
+        invitationRepository.save(invitation);
+
+        return login(new AuthRequest(request.getEmail(), request.getPassword()));
+    }
+
     public boolean isSetupRequired() {
-        return !userRepository.existsByRole(Role.ADMIN);
+        return !userRepository.existsByRole(Role.SUPER_ADMIN);
     }
 }
