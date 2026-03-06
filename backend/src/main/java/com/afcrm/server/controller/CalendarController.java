@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -51,6 +52,7 @@ public class CalendarController {
     }
 
     @PostMapping("/eventual")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CalendarTaskDto> createEventual(@RequestBody EventualTaskRequest request) {
         return serviceRepository.findById(request.getServiceId())
                 .map(service -> {
