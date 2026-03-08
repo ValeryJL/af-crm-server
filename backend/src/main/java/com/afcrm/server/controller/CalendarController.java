@@ -100,8 +100,8 @@ public class CalendarController {
             return ResponseEntity.badRequest().build();
         }
         LocalDateTime newDate = parseDateTime(payload.get("newDate"));
-        schedulingService.reprogramTask(id, newDate);
-        return ResponseEntity.ok().build();
+        boolean success = schedulingService.reprogramTask(id, newDate);
+        return success ? ResponseEntity.ok().build() : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/{id}/form-data")

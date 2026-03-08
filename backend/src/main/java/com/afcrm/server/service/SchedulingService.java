@@ -116,8 +116,11 @@ public class SchedulingService {
         scheduledTaskRepository.saveAll(pendingTasks);
     }
 
-    public void reprogramTask(Long taskId, LocalDateTime newDateTime) {
-        scheduledTaskRepository.findById(taskId).ifPresent(task -> {
+    @Transactional
+    public boolean reprogramTask(Long taskId, LocalDateTime newDateTime) {
+        var taskOpt = scheduledTaskRepository.findById(taskId);
+        if (taskOpt.isPresent()) {
+            ScheduledTask task = taskOpt.get();
             task.setFechaProgramada(newDateTime);
             // Updating periodDate to match the new programmed week/month
             if (task.getService() != null) {
@@ -128,9 +131,12 @@ public class SchedulingService {
                 task.setStatus(TaskStatus.PENDING);
             }
             scheduledTaskRepository.save(task);
-        });
+            return true;
+        }
+        return false;
     }
 
+    @Transactional
     public ScheduledTask assignSmart(Service service, LocalDateTime fechaProgramada) {
         ServiceFrequency freq = service.getFrecuencia() != null ? service.getFrecuencia() : ServiceFrequency.EVENTUAL;
         LocalDate periodDate = calculatePeriodDate(fechaProgramada, freq);
