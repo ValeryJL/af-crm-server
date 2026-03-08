@@ -37,7 +37,9 @@ public interface ScheduledTaskRepository extends JpaRepository<ScheduledTask, Lo
 
     List<ScheduledTask> findByServiceAndFechaProgramadaAfterAndStatus(Service service, LocalDateTime date, TaskStatus status);
     List<ScheduledTask> findByFechaProgramadaBetween(LocalDateTime start, LocalDateTime end);
+    List<ScheduledTask> findByStatusAndPeriodDateBetween(TaskStatus status, LocalDate start, LocalDate end);
     List<ScheduledTask> findByStatus(TaskStatus status);
+    List<ScheduledTask> findByServiceAndPeriodDateAndStatus(Service service, LocalDate periodDate, TaskStatus status);
     long countByStatus(TaskStatus status);
 
     @Transactional

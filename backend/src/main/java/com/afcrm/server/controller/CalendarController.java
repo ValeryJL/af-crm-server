@@ -128,6 +128,16 @@ public class CalendarController {
         return ResponseEntity.ok().build();
     }
 
+    @PatchMapping("/services/{id}/assign-smart")
+    public ResponseEntity<CalendarTaskDto> assignSmart(@PathVariable Long id, @RequestBody java.util.Map<String, String> payload) {
+        if (!payload.containsKey("fechaProgramada")) return ResponseEntity.badRequest().build();
+        return serviceRepository.findById(id).map(service -> {
+            LocalDateTime fechaProgramada = parseDateTime(payload.get("fechaProgramada"));
+            ScheduledTask task = schedulingService.assignSmart(service, fechaProgramada);
+            return ResponseEntity.ok(mapToDto(task));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @PatchMapping("/tasks/{id}/assign")
     public ResponseEntity<CalendarTaskDto> assignTask(@PathVariable Long id, @RequestBody java.util.Map<String, String> payload) {
         if (!payload.containsKey("fechaProgramada")) return ResponseEntity.badRequest().build();
@@ -149,20 +159,28 @@ public class CalendarController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/tasks/unassigned")
+    public List<CalendarTaskDto> getUnassignedTasks(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        
+        return scheduledTaskRepository.findByStatusAndPeriodDateBetween(TaskStatus.UNASSIGNED, start, end)
+                .stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+    }
+
     @GetMapping("/tasks/alerts")
     public List<CalendarTaskDto> getAlerts() {
-        // Simple alert implementation: unassigned or overdue
-        // As per requirements: 
-        // 1. UNASSIGNED approaching (we'll just list all UNASSIGNED for now)
-        // 2. OVERDUE (tasks already marked as such by job or manual check)
-        
-        // Let's also trigger the check here for convenience in this exercise
         schedulingService.markOverdueTasks();
         
-        List<ScheduledTask> alerts = scheduledTaskRepository.findByStatus(TaskStatus.UNASSIGNED);
-        alerts.addAll(scheduledTaskRepository.findByStatus(TaskStatus.OVERDUE));
+        List<ScheduledTask> unassigned = scheduledTaskRepository.findByStatus(TaskStatus.UNASSIGNED);
+        List<ScheduledTask> overdue = scheduledTaskRepository.findByStatus(TaskStatus.OVERDUE);
         
-        return alerts.stream().map(this::mapToDto).collect(Collectors.toList());
+        java.util.List<ScheduledTask> all = new java.util.ArrayList<>(unassigned);
+        all.addAll(overdue);
+        
+        return all.stream().map(this::mapToDto).collect(Collectors.toList());
     }
 
     @DeleteMapping("/tasks/{id}")
@@ -179,6 +197,7 @@ public class CalendarController {
         return CalendarTaskDto.builder()
                 .id(task.getId())
                 .fechaProgramada(task.getFechaProgramada())
+                .periodDate(task.getPeriodDate())
                 .status(task.getStatus())
                 .type(task.getType())
                 .serviceId(task.getService() != null ? task.getService().getId() : null)

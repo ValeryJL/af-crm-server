@@ -49,7 +49,13 @@ public class AuthService {
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow();
         var jwtToken = jwtService.generateToken(new CustomUserDetails(user));
-        return new AuthResponse(jwtToken);
+        return AuthResponse.builder()
+                .token(jwtToken)
+                .role(user.getRole().name())
+                .nombre(user.getNombre())
+                .theme(user.getTheme())
+                .oauthEnabled(user.isOauthEnabled())
+                .build();
     }
 
     public AuthResponse loginWithGoogle(GoogleLoginRequest request) {
@@ -87,7 +93,13 @@ public class AuthService {
                 }
 
                 String jwtToken = jwtService.generateToken(new CustomUserDetails(user));
-                return new AuthResponse(jwtToken);
+                return AuthResponse.builder()
+                        .token(jwtToken)
+                        .role(user.getRole().name())
+                        .nombre(user.getNombre())
+                        .theme(user.getTheme())
+                        .oauthEnabled(user.isOauthEnabled())
+                        .build();
             } else {
                 throw new RuntimeException("Invalid Google ID Token");
             }

@@ -40,10 +40,14 @@ public class SchedulingService {
 
         // --- Maintenance / Eventual tasks (fechaProgramada = null, UNASSIGNED) ---
         while (currentDate.isBefore(endDate) || currentDate.isEqual(endDate)) {
+            LocalDate normalizedPeriod = calculatePeriodDate(currentDate.atStartOfDay(), freq);
+
+            System.out.println("DEBUG: Generating task for service " + service.getId() + " freq=" + freq + " date=" + currentDate + " normalized=" + normalizedPeriod);
+
             ScheduledTask task = ScheduledTask.builder()
                     .service(service)
                     .fechaProgramada(null)        // UNASSIGNED: no date yet
-                    .periodDate(currentDate)       // tracks which period this belongs to
+                    .periodDate(normalizedPeriod)  // tracks which period this belongs to
                     .status(TaskStatus.UNASSIGNED)
                     .type(freq == ServiceFrequency.EVENTUAL ? TaskType.EVENTUAL : TaskType.MAINTENANCE)
                     .build();
@@ -115,11 +119,55 @@ public class SchedulingService {
     public void reprogramTask(Long taskId, LocalDateTime newDateTime) {
         scheduledTaskRepository.findById(taskId).ifPresent(task -> {
             task.setFechaProgramada(newDateTime);
+            // Updating periodDate to match the new programmed week/month
+            if (task.getService() != null) {
+                ServiceFrequency freq = task.getService().getFrecuencia() != null ? task.getService().getFrecuencia() : ServiceFrequency.EVENTUAL;
+                task.setPeriodDate(calculatePeriodDate(newDateTime, freq));
+            }
             if (task.getStatus() == TaskStatus.UNASSIGNED) {
                 task.setStatus(TaskStatus.PENDING);
             }
             scheduledTaskRepository.save(task);
         });
+    }
+
+    public ScheduledTask assignSmart(Service service, LocalDateTime fechaProgramada) {
+        ServiceFrequency freq = service.getFrecuencia() != null ? service.getFrecuencia() : ServiceFrequency.EVENTUAL;
+        LocalDate periodDate = calculatePeriodDate(fechaProgramada, freq);
+
+        List<ScheduledTask> unassigned = scheduledTaskRepository.findByServiceAndPeriodDateAndStatus(
+                service, periodDate, TaskStatus.UNASSIGNED);
+
+        if (!unassigned.isEmpty()) {
+            ScheduledTask task = unassigned.get(0);
+            task.setFechaProgramada(fechaProgramada);
+            task.setStatus(TaskStatus.PENDING);
+            return scheduledTaskRepository.save(task);
+        }
+
+        // If not found, we create a new eventual task for that service and date
+        ScheduledTask newTask = ScheduledTask.builder()
+                .service(service)
+                .fechaProgramada(fechaProgramada)
+                .periodDate(periodDate)
+                .status(TaskStatus.PENDING)
+                .type(TaskType.EVENTUAL)
+                .build();
+        return scheduledTaskRepository.save(newTask);
+    }
+
+    public LocalDate calculatePeriodDate(LocalDateTime date, ServiceFrequency freq) {
+        LocalDate localDate = date.toLocalDate();
+        if (freq == null) return localDate;
+        
+        return switch (freq) {
+            case WEEKLY -> localDate.minusDays(localDate.getDayOfWeek().getValue() - 1);
+            case FIFTEEN_DAYS -> localDate.getDayOfMonth() <= 15 
+                    ? localDate.withDayOfMonth(1) 
+                    : localDate.withDayOfMonth(16);
+            case MONTHLY -> localDate.withDayOfMonth(1);
+            default -> localDate;
+        };
     }
 
     @Transactional
