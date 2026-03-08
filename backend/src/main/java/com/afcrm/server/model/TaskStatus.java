@@ -1,8 +1,9 @@
 package com.afcrm.server.model;
 
 public enum TaskStatus {
+    UNASSIGNED,
     PENDING,
-    IN_PROGRESS,
-    COMPLETED,
+    RESOLVED,
+    OVERDUE,
     CANCELLED
 }

@@ -46,10 +46,8 @@ public class CalendarEventService {
     public CalendarResponseDto getFullCalendarData(LocalDateTime start, LocalDateTime end) {
         List<CalendarEventDto> events = getEventsInRange(start, end);
         
-        List<CalendarTaskDto> tasks = taskRepository.findByScheduledDateBetween(
-                start.toLocalDate(), 
-                end.toLocalDate()
-        ).stream().map(this::mapTaskToDto).collect(Collectors.toList());
+        List<CalendarTaskDto> tasks = taskRepository.findByFechaProgramadaBetween(start, end)
+                .stream().map(this::mapTaskToDto).collect(Collectors.toList());
 
         return CalendarResponseDto.builder()
                 .events(events)
@@ -118,7 +116,7 @@ public class CalendarEventService {
     private CalendarTaskDto mapTaskToDto(ScheduledTask task) {
         return CalendarTaskDto.builder()
                 .id(task.getId())
-                .scheduledDate(task.getScheduledDate())
+                .fechaProgramada(task.getFechaProgramada())
                 .status(task.getStatus())
                 .type(task.getType())
                 .serviceId(task.getService() != null ? task.getService().getId() : null)

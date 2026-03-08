@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,31 +21,31 @@ public class SchedulingService {
     private final ScheduledTaskRepository scheduledTaskRepository;
 
     public void generateTasksForService(Service service, int generationMonths) {
-        LocalDate startDate = service.getAlta() != null ? service.getAlta() : LocalDate.now();
+        LocalDate startDate = service.getFechaInicio() != null ? service.getFechaInicio() : LocalDate.now();
         generateTasksForService(service, generationMonths, startDate);
     }
 
     public void generateTasksForService(Service service, int generationMonths, LocalDate startDate) {
-        if (service.getBaja() != null && service.getBaja().isBefore(LocalDate.now())) {
+        if (service.getFechaFin() != null && service.getFechaFin().isBefore(LocalDate.now())) {
             return; // Inactive service
         }
 
-        LocalDate endDate = LocalDate.now().plusMonths(generationMonths);
-        if (service.getBaja() != null && service.getBaja().isBefore(endDate)) {
-            endDate = service.getBaja();
-        }
+        LocalDate endDate = service.getFechaFin() != null ? service.getFechaFin()
+                : LocalDate.now().plusMonths(generationMonths);
 
         List<ScheduledTask> tasks = new ArrayList<>();
         LocalDate currentDate = startDate;
 
         ServiceFrequency freq = service.getFrecuencia() != null ? service.getFrecuencia() : ServiceFrequency.EVENTUAL;
 
+        // --- Maintenance / Eventual tasks (fechaProgramada = null, UNASSIGNED) ---
         while (currentDate.isBefore(endDate) || currentDate.isEqual(endDate)) {
             ScheduledTask task = ScheduledTask.builder()
                     .service(service)
-                    .scheduledDate(currentDate)
-                    .status(TaskStatus.PENDING)
-                    .type(freq == ServiceFrequency.EVENTUAL ? TaskType.EVENTUAL : TaskType.REGULAR)
+                    .fechaProgramada(null)        // UNASSIGNED: no date yet
+                    .periodDate(currentDate)       // tracks which period this belongs to
+                    .status(TaskStatus.UNASSIGNED)
+                    .type(freq == ServiceFrequency.EVENTUAL ? TaskType.EVENTUAL : TaskType.MAINTENANCE)
                     .build();
             tasks.add(task);
 
@@ -52,16 +53,36 @@ public class SchedulingService {
                 case WEEKLY:
                     currentDate = currentDate.plusWeeks(1);
                     break;
-                case FORTNIGHTLY:
+                case FIFTEEN_DAYS:
                     currentDate = currentDate.plusWeeks(2);
                     break;
                 case MONTHLY:
                     currentDate = currentDate.plusMonths(1);
                     break;
                 default:
-                    // Eventual or unknown
-                    currentDate = endDate.plusDays(1);
+                    currentDate = endDate.plusDays(1); // EVENTUAL: single task, break loop
                     break;
+            }
+        }
+
+        // --- Yearly SERVICE events (fechaProgramada pre-assigned, status PENDING) ---
+        if (service.isServiceToggle()) {
+            // First event: use fechaPrimerService if provided, else fechaInicio + 1 year
+            LocalDate firstServiceDate = service.getFechaPrimerService() != null
+                    ? service.getFechaPrimerService()
+                    : startDate.plusYears(1);
+
+            LocalDate anniversary = firstServiceDate;
+            while (anniversary.isBefore(endDate) || anniversary.isEqual(endDate)) {
+                ScheduledTask serviceTask = ScheduledTask.builder()
+                        .service(service)
+                        .fechaProgramada(anniversary.atStartOfDay()) // pre-assigned date
+                        .periodDate(anniversary)
+                        .status(TaskStatus.PENDING)  // already has a date → PENDING
+                        .type(TaskType.SERVICE)
+                        .build();
+                tasks.add(serviceTask);
+                anniversary = anniversary.plusYears(1);
             }
         }
 
@@ -71,25 +92,32 @@ public class SchedulingService {
     @Transactional
     public void rescheduleService(Service service, int generationMonths) {
         LocalDate today = LocalDate.now();
-        // Delete future pending tasks
-        scheduledTaskRepository.deleteByServiceAndScheduledDateAfterAndStatus(service, today, TaskStatus.PENDING);
-        // Generate new ones starting from tomorrow to avoid duplicating today's task if it exists
+        // Delete all future unresolved tasks (both PENDING by fechaProgramada and all UNASSIGNED)
+        scheduledTaskRepository.deleteByServiceAndFechaProgramadaAfterAndStatus(
+                service, today.atStartOfDay(), TaskStatus.PENDING);
+        scheduledTaskRepository.deleteByServiceAndStatus(service, TaskStatus.UNASSIGNED);
+
         LocalDate startDate = today.plusDays(1);
         generateTasksForService(service, generationMonths, startDate);
     }
 
-    public void deactivateService(Service service, LocalDate bajaDate) {
-        service.setBaja(bajaDate);
-        List<ScheduledTask> pendingTasks = scheduledTaskRepository.findByServiceAndScheduledDateAfterAndStatus(service, bajaDate, TaskStatus.PENDING);
+    public void deactivateService(Service service, LocalDate fechaFinDate) {
+        service.setFechaFin(fechaFinDate);
+        List<ScheduledTask> pendingTasks = scheduledTaskRepository
+                .findByServiceAndFechaProgramadaAfterAndStatus(
+                        service, fechaFinDate.atStartOfDay(), TaskStatus.PENDING);
         for (ScheduledTask task : pendingTasks) {
             task.setStatus(TaskStatus.CANCELLED);
         }
         scheduledTaskRepository.saveAll(pendingTasks);
     }
 
-    public void reprogramTask(Long taskId, LocalDate newDate) {
+    public void reprogramTask(Long taskId, LocalDateTime newDateTime) {
         scheduledTaskRepository.findById(taskId).ifPresent(task -> {
-            task.setScheduledDate(newDate);
+            task.setFechaProgramada(newDateTime);
+            if (task.getStatus() == TaskStatus.UNASSIGNED) {
+                task.setStatus(TaskStatus.PENDING);
+            }
             scheduledTaskRepository.save(task);
         });
     }
@@ -101,5 +129,17 @@ public class SchedulingService {
             task.setStatus(status);
         }
         scheduledTaskRepository.saveAll(tasks);
+    }
+
+    @Transactional
+    public void markOverdueTasks() {
+        LocalDateTime now = LocalDateTime.now();
+        List<ScheduledTask> pending = scheduledTaskRepository.findByStatus(TaskStatus.PENDING);
+        for (ScheduledTask task : pending) {
+            if (task.getFechaProgramada() != null && task.getFechaProgramada().isBefore(now)) {
+                task.setStatus(TaskStatus.OVERDUE);
+            }
+        }
+        scheduledTaskRepository.saveAll(pending);
     }
 }

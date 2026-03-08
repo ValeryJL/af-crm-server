@@ -24,7 +24,7 @@ public class StatsController {
 
     @GetMapping("/dashboard")
     public ResponseEntity<DashboardStatsDto> getDashboardStats() {
-        long activeServices = serviceRepository.countByBajaIsNull();
+        long activeServices = serviceRepository.countByFechaFinIsNull();
         long availableTechnicians = userRepository.countByStatus("ACTIVE");
         
         long pendingScheduled = scheduledTaskRepository.countByStatus(TaskStatus.PENDING);

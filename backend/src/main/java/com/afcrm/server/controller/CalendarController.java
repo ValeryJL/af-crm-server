@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -46,7 +47,8 @@ public class CalendarController {
         
         // In a real scenario, we would filter by the logged-in user if they are a TECH.
         // For now, grabbing the range.
-        return scheduledTaskRepository.findByScheduledDateBetween(start, end).stream()
+        return scheduledTaskRepository.findByFechaProgramadaBetween(
+                start.atStartOfDay(), end.atTime(23, 59, 59)).stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
@@ -66,7 +68,7 @@ public class CalendarController {
 
                     // Create calendar node
                     ScheduledTask task = ScheduledTask.builder()
-                            .scheduledDate(request.getFecha())
+                            .fechaProgramada(request.getFecha() != null ? request.getFecha().atStartOfDay() : null)
                             .type(TaskType.EVENTUAL)
                             .status(TaskStatus.PENDING)
                             .service(service)
@@ -84,8 +86,8 @@ public class CalendarController {
                     if (updates.containsKey("status")) {
                         task.setStatus(TaskStatus.valueOf(updates.get("status")));
                     }
-                    if (updates.containsKey("scheduledDate")) {
-                        task.setScheduledDate(LocalDate.parse(updates.get("scheduledDate")));
+                    if (updates.containsKey("fechaProgramada")) {
+                        task.setFechaProgramada(parseDateTime(updates.get("fechaProgramada")));
                     }
                     return ResponseEntity.ok(mapToDto(scheduledTaskRepository.save(task)));
                 })
@@ -97,7 +99,7 @@ public class CalendarController {
         if (!payload.containsKey("newDate")) {
             return ResponseEntity.badRequest().build();
         }
-        LocalDate newDate = LocalDateTime.parse(payload.get("newDate").replace("Z", "")).toLocalDate();
+        LocalDateTime newDate = parseDateTime(payload.get("newDate"));
         schedulingService.reprogramTask(id, newDate);
         return ResponseEntity.ok().build();
     }
@@ -126,14 +128,81 @@ public class CalendarController {
         return ResponseEntity.ok().build();
     }
 
+    @PatchMapping("/tasks/{id}/assign")
+    public ResponseEntity<CalendarTaskDto> assignTask(@PathVariable Long id, @RequestBody java.util.Map<String, String> payload) {
+        if (!payload.containsKey("fechaProgramada")) return ResponseEntity.badRequest().build();
+        return scheduledTaskRepository.findById(id).map(task -> {
+            task.setFechaProgramada(parseDateTime(payload.get("fechaProgramada")));
+            task.setStatus(TaskStatus.PENDING);
+            return ResponseEntity.ok(mapToDto(scheduledTaskRepository.save(task)));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/tasks/{id}/resolve")
+    public ResponseEntity<CalendarTaskDto> resolveTask(@PathVariable Long id, @RequestBody java.util.Map<String, Object> payload) {
+        return scheduledTaskRepository.findById(id).map(task -> {
+            task.setStatus(TaskStatus.RESOLVED);
+            if (payload.containsKey("reportID")) {
+                task.setReportID((String) payload.get("reportID"));
+            }
+            return ResponseEntity.ok(mapToDto(scheduledTaskRepository.save(task)));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/tasks/alerts")
+    public List<CalendarTaskDto> getAlerts() {
+        // Simple alert implementation: unassigned or overdue
+        // As per requirements: 
+        // 1. UNASSIGNED approaching (we'll just list all UNASSIGNED for now)
+        // 2. OVERDUE (tasks already marked as such by job or manual check)
+        
+        // Let's also trigger the check here for convenience in this exercise
+        schedulingService.markOverdueTasks();
+        
+        List<ScheduledTask> alerts = scheduledTaskRepository.findByStatus(TaskStatus.UNASSIGNED);
+        alerts.addAll(scheduledTaskRepository.findByStatus(TaskStatus.OVERDUE));
+        
+        return alerts.stream().map(this::mapToDto).collect(Collectors.toList());
+    }
+
+    @DeleteMapping("/tasks/{id}")
+    public ResponseEntity<Void> deleteTask(@PathVariable Long id) {
+        return scheduledTaskRepository.findById(id).map(task -> {
+            // Soft-delete: mark as CANCELLED instead of hard delete to preserve history
+            task.setStatus(TaskStatus.CANCELLED);
+            scheduledTaskRepository.save(task);
+            return ResponseEntity.noContent().<Void>build();
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     private CalendarTaskDto mapToDto(ScheduledTask task) {
         return CalendarTaskDto.builder()
                 .id(task.getId())
-                .scheduledDate(task.getScheduledDate())
+                .fechaProgramada(task.getFechaProgramada())
                 .status(task.getStatus())
                 .type(task.getType())
                 .serviceId(task.getService() != null ? task.getService().getId() : null)
                 .serviceName(task.getService() != null ? task.getService().getNombre() : null)
                 .build();
+    }
+
+    /**
+     * Parses an ISO-8601 date or datetime string into a LocalDateTime.
+     * Accepts: "2026-03-06", "2026-03-06T19:52:00", "2026-03-06T19:52:00.000Z", etc.
+     */
+    private LocalDateTime parseDateTime(String value) {
+        if (value == null) return null;
+        try {
+            // Try full ISO datetime with offset (e.g. 2026-03-06T19:52:00.000Z)
+            return OffsetDateTime.parse(value).toLocalDateTime();
+        } catch (Exception e1) {
+            try {
+                // Try local datetime without offset (e.g. 2026-03-06T19:52:00)
+                return LocalDateTime.parse(value);
+            } catch (Exception e2) {
+                // Fallback: date-only (e.g. 2026-03-06)
+                return LocalDate.parse(value).atStartOfDay();
+            }
+        }
     }
 }

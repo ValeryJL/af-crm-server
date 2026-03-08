@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "calendar_tasks")
@@ -20,8 +21,13 @@ public class ScheduledTask extends AuditableEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "scheduled_date")
-    private LocalDate scheduledDate;
+    @Column(name = "fecha_programada")
+    private LocalDateTime fechaProgramada;
+
+    @Column(name = "period_date")
+    private LocalDate periodDate;
+
+    private String reportID;
 
     @Enumerated(EnumType.STRING)
     private TaskStatus status;

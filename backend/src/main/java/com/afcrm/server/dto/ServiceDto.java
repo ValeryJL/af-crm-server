@@ -16,7 +16,10 @@ public class ServiceDto {
     private String cliente;
     private String contactos;
     private String requerimientos;
-    private LocalDate alta;
-    private LocalDate baja;
+    private String equipo;
+    private boolean serviceToggle;
+    private LocalDate fechaPrimerService;
+    private LocalDate fechaInicio;
+    private LocalDate fechaFin;
     private Long groupId;
 }

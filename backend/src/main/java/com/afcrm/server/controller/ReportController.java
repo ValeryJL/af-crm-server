@@ -47,7 +47,7 @@ public class ReportController {
                     reportRepository.save(report);
 
                     // Crucial Step: Auto-Complete Calendar Node
-                    task.setStatus(TaskStatus.COMPLETED);
+                    task.setStatus(TaskStatus.RESOLVED);
                     scheduledTaskRepository.save(task);
 
                     return ResponseEntity.ok().build();

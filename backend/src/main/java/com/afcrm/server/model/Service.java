@@ -30,11 +30,17 @@ public class Service extends AuditableEntity {
     private String planilla;
     private String cliente;
     private String contactos;
+    private String equipo;
     @Column(name = "requerimientos_especificos", length = 1000)
     private String requerimientos;
 
-    private LocalDate alta;
-    private LocalDate baja;
+    @Builder.Default
+    private boolean serviceToggle = false;
+
+    private LocalDate fechaPrimerService;
+
+    private LocalDate fechaInicio;
+    private LocalDate fechaFin;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "grupos_id")

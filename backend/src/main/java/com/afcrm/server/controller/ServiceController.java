@@ -1,12 +1,16 @@
 package com.afcrm.server.controller;
 
+import com.afcrm.server.dto.CalendarTaskDto;
 import com.afcrm.server.dto.ServiceDto;
 import com.afcrm.server.model.Service;
 import com.afcrm.server.model.ServiceFrequency;
+import com.afcrm.server.model.TaskStatus;
+import com.afcrm.server.model.TaskType;
 import com.afcrm.server.repository.GroupRepository;
 import com.afcrm.server.repository.ServiceRepository;
 import com.afcrm.server.service.SchedulingService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +28,42 @@ public class ServiceController {
     private final GroupRepository groupRepository;
     private final SchedulingService schedulingService;
     private final com.afcrm.server.repository.ScheduledTaskRepository scheduledTaskRepository;
+
+    @GetMapping("/{id}/tasks")
+    public ResponseEntity<List<CalendarTaskDto>> getTasksForService(
+            @PathVariable Long id,
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) TaskType type,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+        return serviceRepository.findById(id)
+                .map(service -> {
+                    java.time.LocalDateTime fromTime = from != null ? from.atStartOfDay() : null;
+                    java.time.LocalDateTime toTime = to != null ? to.atTime(23, 59, 59) : null;
+                    List<CalendarTaskDto> tasks = scheduledTaskRepository
+                            .findTasksByService(
+                                    service,
+                                    status != null, status,
+                                    type != null, type,
+                                    fromTime != null, fromTime,
+                                    toTime != null, toTime
+                            )
+                            .stream()
+                            .map(t -> CalendarTaskDto.builder()
+                                    .id(t.getId())
+                                    .fechaProgramada(t.getFechaProgramada())
+                                    .reportID(t.getReportID())
+                                    .status(t.getStatus())
+                                    .type(t.getType())
+                                    .serviceId(service.getId())
+                                    .serviceName(service.getNombre())
+                                    .build())
+                            .collect(Collectors.toList());
+                    return ResponseEntity.ok(tasks);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
 
     @GetMapping
     public List<ServiceDto> getAll() {
@@ -56,12 +96,12 @@ public class ServiceController {
         return serviceRepository.findById(id)
                 .map(service -> {
                     ServiceFrequency oldFreq = service.getFrecuencia();
-                    boolean wasInactive = service.getBaja() != null;
+                    boolean wasInactive = service.getFechaFin() != null;
                     mapToEntity(dto, service);
                     Service updated = serviceRepository.save(service);
-                    if (updated.getBaja() != null) {
+                    if (updated.getFechaFin() != null) {
                         // Deactivating: cancel future pending tasks
-                        schedulingService.deactivateService(updated, updated.getBaja());
+                        schedulingService.deactivateService(updated, updated.getFechaFin());
                     } else if (wasInactive || (oldFreq != updated.getFrecuencia())) {
                         // Reactivating or frequency changed: regenerate schedule
                         schedulingService.rescheduleService(updated, 12);
@@ -94,9 +134,12 @@ public class ServiceController {
         service.setPlanilla(dto.getPlanilla());
         service.setCliente(dto.getCliente());
         service.setContactos(dto.getContactos());
+        service.setEquipo(dto.getEquipo());
+        service.setServiceToggle(dto.isServiceToggle());
+        service.setFechaPrimerService(dto.getFechaPrimerService());
         service.setRequerimientos(dto.getRequerimientos());
-        service.setAlta(dto.getAlta() != null ? dto.getAlta() : LocalDate.now());
-        service.setBaja(dto.getBaja());
+        service.setFechaInicio(dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now());
+        service.setFechaFin(dto.getFechaFin());
 
         if (dto.getGroupId() != null) {
              groupRepository.findById(dto.getGroupId()).ifPresent(service::setGroup);
@@ -114,9 +157,12 @@ public class ServiceController {
         dto.setPlanilla(service.getPlanilla());
         dto.setCliente(service.getCliente());
         dto.setContactos(service.getContactos());
+        dto.setEquipo(service.getEquipo());
+        dto.setServiceToggle(service.isServiceToggle());
+        dto.setFechaPrimerService(service.getFechaPrimerService());
         dto.setRequerimientos(service.getRequerimientos());
-        dto.setAlta(service.getAlta());
-        dto.setBaja(service.getBaja());
+        dto.setFechaInicio(service.getFechaInicio());
+        dto.setFechaFin(service.getFechaFin());
         if (service.getGroup() != null) {
             dto.setGroupId(service.getGroup().getId());
         }

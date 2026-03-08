@@ -5,7 +5,7 @@ import lombok.Getter;
 @Getter
 public enum ServiceFrequency {
     WEEKLY("semanal"),
-    FORTNIGHTLY("quincenal"),
+    FIFTEEN_DAYS("quincenal"),
     MONTHLY("mensual"),
     EVENTUAL("eventual");
 

@@ -57,8 +57,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // Token parsing failed: expired, malformed, etc.
-            // Proceed so security filter chain handles the 403 Forbidden properly
+            // Token parsing failed: expired, malformed, invalid signature, etc.
+            // We don't set the SecurityContextHolder, so the request remains unauthenticated.
+            // Spring Security will then trigger the AuthenticationEntryPoint configured in SecurityConfig.
         }
 
         filterChain.doFilter(request, response);
