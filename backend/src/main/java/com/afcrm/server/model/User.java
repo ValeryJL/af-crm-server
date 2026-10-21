@@ -1,0 +1,45 @@
+package com.afcrm.server.model;
+
+import lombok.Builder;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Entity
+@Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class User extends AuditableEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(unique = true, nullable = false)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
+    private String nombre;
+    private String apellido;
+
+    private String telefono;
+    private String status; // ACTIVE, INACTIVE, etc.
+
+    @Builder.Default
+    private String theme = "light";
+
+    @Builder.Default
+    private boolean oauthEnabled = true;
+
+    @Column(columnDefinition = "text")
+    private String customConfiguration;
+}
