@@ -79,7 +79,9 @@ public class ServiceEntityService {
         service.setFrecuenciaVisita(dto.getFrecuenciaVisita());
         service.setDiasAvisoAlerta(dto.getDiasAvisoAlerta());
         service.setNotas(dto.getNotas());
-        service.setActivo(dto.isActivo());
+        if (dto.getActivo() != null) {
+            service.setActivo(dto.getActivo());
+        }
 
         if (dto.getFechaUltimaVisita() != null && !dto.getFechaUltimaVisita().equals(service.getFechaUltimaVisita())) {
             service.setFechaUltimaVisita(dto.getFechaUltimaVisita());

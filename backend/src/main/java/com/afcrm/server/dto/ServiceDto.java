@@ -22,7 +22,7 @@ public class ServiceDto {
     private LocalDate fechaUltimaVisita;
     private LocalDate fechaProximaVisitaLimite;
     private String notas;
-    private boolean activo;
+    private Boolean activo;
     private Long clientId;
     private String clientRazonSocial;
     private Integer totalEquipos;

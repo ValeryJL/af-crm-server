@@ -68,7 +68,7 @@ public class WorkOrderService {
                 .numeroOt(otNumber)
                 .tipo(dto.getTipo() != null ? dto.getTipo() : WorkOrderType.PREVENTIVO)
                 .estado(dto.getEstado() != null ? dto.getEstado() : WorkOrderStatus.PENDIENTE)
-                .fechaProgramada(dto.getFechaProgramada() != null ? dto.getFechaProgramada() : LocalDateTime.now())
+                .fechaProgramada(dto.getFechaProgramada())
                 .descripcion(dto.getDescripcion())
                 .service(service)
                 .tecnicoAsignado(tecnico)
@@ -77,6 +77,48 @@ public class WorkOrderService {
                 .build();
 
         return toDto(workOrderRepository.save(wo));
+    }
+
+    @Transactional
+    public WorkOrderDto updateWorkOrder(Long id, WorkOrderDto dto) {
+        WorkOrder wo = workOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Work Order no encontrada con ID: " + id));
+
+        if (dto.getTipo() != null) wo.setTipo(dto.getTipo());
+        if (dto.getEstado() != null) wo.setEstado(dto.getEstado());
+        wo.setFechaProgramada(dto.getFechaProgramada());
+        if (dto.getDescripcion() != null) wo.setDescripcion(dto.getDescripcion());
+        if (dto.getTecnicoId() != null) {
+            User tecnico = userRepository.findById(dto.getTecnicoId()).orElse(null);
+            wo.setTecnicoAsignado(tecnico);
+        } else if (dto.getTecnicoId() == null && dto.getTecnicoNombre() == null) {
+            // keep existing or leave null if explicitly desired
+        }
+        if (dto.getFormDataReporte() != null) wo.setFormDataReporte(dto.getFormDataReporte());
+        if (dto.getPartesReemplazadas() != null) wo.setPartesReemplazadas(dto.getPartesReemplazadas());
+
+        return toDto(workOrderRepository.save(wo));
+    }
+
+    @Transactional
+    public WorkOrderDto updateSchedule(Long id, LocalDateTime fechaProgramada, Long tecnicoId) {
+        WorkOrder wo = workOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Work Order no encontrada con ID: " + id));
+
+        wo.setFechaProgramada(fechaProgramada);
+        if (tecnicoId != null) {
+            User tecnico = userRepository.findById(tecnicoId).orElse(null);
+            wo.setTecnicoAsignado(tecnico);
+        }
+        return toDto(workOrderRepository.save(wo));
+    }
+
+    @Transactional
+    public void deleteWorkOrder(Long id) {
+        if (!workOrderRepository.existsById(id)) {
+            throw new RuntimeException("Work Order no encontrada con ID: " + id);
+        }
+        workOrderRepository.deleteById(id);
     }
 
     @Transactional

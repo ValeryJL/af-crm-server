@@ -40,6 +40,24 @@ public class Equipment extends AuditableEntity {
     @Column(name = "horometro_actual")
     private Double horometroActual;
 
+    @Column(name = "periodicidad_regular")
+    private String periodicidadRegular;
+
+    @Column(name = "intervalo_horas_regular")
+    private Integer intervaloHorasRegular;
+
+    @Column(name = "fecha_ultima_visita_regular")
+    private LocalDate fechaUltimaVisitaRegular;
+
+    @Column(name = "fecha_proxima_visita_regular")
+    private LocalDate fechaProximaVisitaRegular;
+
+    @Column(name = "periodicidad_service_mayor")
+    private String periodicidadServiceMayor;
+
+    @Column(name = "fecha_ultimo_service_mayor")
+    private LocalDate fechaUltimoServiceMayor;
+
     @Column(name = "fecha_proximo_service_mayor")
     private LocalDate fechaProximoServiceMayor;
 

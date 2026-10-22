@@ -18,7 +18,7 @@ public class ClientDto {
     private String telefonoGeneral;
     private String emailComercial;
     private String notas;
-    private boolean activo;
+    private Boolean activo;
     private Integer totalServicios;
     private Integer totalEquipos;
     private List<ContactDto> contacts;

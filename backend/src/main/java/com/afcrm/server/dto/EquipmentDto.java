@@ -19,14 +19,23 @@ public class EquipmentDto {
     private String numeroSerie;
     private String ubicacion;
     private Double horometroActual;
+    
+    // Periodicidades en equipos
+    private String periodicidadRegular; // e.g. "MENSUAL", "BIMESTRAL", "QUINCENAL", "TRIMESTRAL", "SEMANAL"
+    private Integer intervaloHorasRegular; // e.g. 250 hs
+    private LocalDate fechaUltimaVisitaRegular;
+    private LocalDate fechaProximaVisitaRegular;
+    
+    private String periodicidadServiceMayor; // e.g. "ANUAL", "SEMESTRAL"
+    private LocalDate fechaUltimoServiceMayor;
     private LocalDate fechaProximoServiceMayor;
-    private Integer intervaloHorasService;
+    private Integer intervaloHorasService; // e.g. 1000 hs
+    
     private Map<String, Object> specs;
     private String notas;
-    private boolean activo;
+    private Boolean activo;
     private Long serviceId;
     private String serviceNombre;
     private String clientRazonSocial;
     private List<EquipmentPartDto> parts;
 }
-

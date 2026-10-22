@@ -56,6 +56,12 @@ public class EquipmentService {
                 .numeroSerie(dto.getNumeroSerie())
                 .ubicacion(dto.getUbicacion())
                 .horometroActual(dto.getHorometroActual())
+                .periodicidadRegular(dto.getPeriodicidadRegular())
+                .intervaloHorasRegular(dto.getIntervaloHorasRegular())
+                .fechaUltimaVisitaRegular(dto.getFechaUltimaVisitaRegular())
+                .fechaProximaVisitaRegular(dto.getFechaProximaVisitaRegular())
+                .periodicidadServiceMayor(dto.getPeriodicidadServiceMayor())
+                .fechaUltimoServiceMayor(dto.getFechaUltimoServiceMayor())
                 .fechaProximoServiceMayor(dto.getFechaProximoServiceMayor())
                 .intervaloHorasService(dto.getIntervaloHorasService())
                 .specs(dto.getSpecs() != null ? dto.getSpecs() : java.util.Map.of())
@@ -78,13 +84,21 @@ public class EquipmentService {
         eq.setNumeroSerie(dto.getNumeroSerie());
         eq.setUbicacion(dto.getUbicacion());
         eq.setHorometroActual(dto.getHorometroActual());
+        eq.setPeriodicidadRegular(dto.getPeriodicidadRegular());
+        eq.setIntervaloHorasRegular(dto.getIntervaloHorasRegular());
+        eq.setFechaUltimaVisitaRegular(dto.getFechaUltimaVisitaRegular());
+        eq.setFechaProximaVisitaRegular(dto.getFechaProximaVisitaRegular());
+        eq.setPeriodicidadServiceMayor(dto.getPeriodicidadServiceMayor());
+        eq.setFechaUltimoServiceMayor(dto.getFechaUltimoServiceMayor());
         eq.setFechaProximoServiceMayor(dto.getFechaProximoServiceMayor());
         eq.setIntervaloHorasService(dto.getIntervaloHorasService());
         if (dto.getSpecs() != null) {
             eq.setSpecs(dto.getSpecs());
         }
         eq.setNotas(dto.getNotas());
-        eq.setActivo(dto.isActivo());
+        if (dto.getActivo() != null) {
+            eq.setActivo(dto.getActivo());
+        }
 
         return toDto(equipmentRepository.save(eq));
     }
@@ -150,6 +164,12 @@ public class EquipmentService {
                 .numeroSerie(eq.getNumeroSerie())
                 .ubicacion(eq.getUbicacion())
                 .horometroActual(eq.getHorometroActual())
+                .periodicidadRegular(eq.getPeriodicidadRegular())
+                .intervaloHorasRegular(eq.getIntervaloHorasRegular())
+                .fechaUltimaVisitaRegular(eq.getFechaUltimaVisitaRegular())
+                .fechaProximaVisitaRegular(eq.getFechaProximaVisitaRegular())
+                .periodicidadServiceMayor(eq.getPeriodicidadServiceMayor())
+                .fechaUltimoServiceMayor(eq.getFechaUltimoServiceMayor())
                 .fechaProximoServiceMayor(eq.getFechaProximoServiceMayor())
                 .intervaloHorasService(eq.getIntervaloHorasService())
                 .specs(eq.getSpecs())

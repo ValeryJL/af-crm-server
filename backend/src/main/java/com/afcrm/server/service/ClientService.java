@@ -58,8 +58,8 @@ public class ClientService {
         client.setTelefonoGeneral(dto.getTelefonoGeneral());
         client.setEmailComercial(dto.getEmailComercial());
         client.setNotas(dto.getNotas());
-        if (dto.isActivo() != client.isActivo()) {
-            client.setActivo(dto.isActivo());
+        if (dto.getActivo() != null && dto.getActivo() != client.isActivo()) {
+            client.setActivo(dto.getActivo());
         }
 
         return toDto(clientRepository.save(client));
