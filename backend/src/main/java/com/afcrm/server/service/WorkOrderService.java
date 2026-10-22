@@ -64,10 +64,15 @@ public class WorkOrderService {
             otNumber = "OT-" + System.currentTimeMillis() % 1000000;
         }
 
+        WorkOrderStatus estadoInicial = dto.getEstado();
+        if (estadoInicial == null) {
+            estadoInicial = (dto.getFechaProgramada() != null || tecnico != null) ? WorkOrderStatus.ASIGNADA : WorkOrderStatus.PENDIENTE;
+        }
+
         WorkOrder wo = WorkOrder.builder()
                 .numeroOt(otNumber)
                 .tipo(dto.getTipo() != null ? dto.getTipo() : WorkOrderType.PREVENTIVO)
-                .estado(dto.getEstado() != null ? dto.getEstado() : WorkOrderStatus.PENDIENTE)
+                .estado(estadoInicial)
                 .fechaProgramada(dto.getFechaProgramada())
                 .descripcion(dto.getDescripcion())
                 .service(service)
@@ -110,6 +115,13 @@ public class WorkOrderService {
             User tecnico = userRepository.findById(tecnicoId).orElse(null);
             wo.setTecnicoAsignado(tecnico);
         }
+
+        if (fechaProgramada != null && wo.getEstado() == WorkOrderStatus.PENDIENTE) {
+            wo.setEstado(WorkOrderStatus.ASIGNADA);
+        } else if (fechaProgramada == null && wo.getEstado() == WorkOrderStatus.ASIGNADA) {
+            wo.setEstado(WorkOrderStatus.PENDIENTE);
+        }
+
         return toDto(workOrderRepository.save(wo));
     }
 
