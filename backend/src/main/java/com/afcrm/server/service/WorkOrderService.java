@@ -66,7 +66,7 @@ public class WorkOrderService {
 
         WorkOrderStatus estadoInicial = dto.getEstado();
         if (estadoInicial == null) {
-            estadoInicial = (dto.getFechaProgramada() != null || tecnico != null) ? WorkOrderStatus.ASIGNADA : WorkOrderStatus.PENDIENTE;
+            estadoInicial = (dto.getFechaProgramada() != null) ? WorkOrderStatus.ASIGNADA : WorkOrderStatus.PENDIENTE;
         }
 
         WorkOrder wo = WorkOrder.builder()
