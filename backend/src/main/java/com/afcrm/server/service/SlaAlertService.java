@@ -4,6 +4,7 @@ import com.afcrm.server.dto.SlaAlertDto;
 import com.afcrm.server.model.Equipment;
 import com.afcrm.server.model.EquipmentPart;
 import com.afcrm.server.model.Service;
+import com.afcrm.server.model.ServiceFrequency;
 import com.afcrm.server.repository.EquipmentPartRepository;
 import com.afcrm.server.repository.EquipmentRepository;
 import com.afcrm.server.repository.ServiceRepository;
@@ -22,6 +23,7 @@ public class SlaAlertService {
     private final ServiceRepository serviceRepository;
     private final EquipmentRepository equipmentRepository;
     private final EquipmentPartRepository partRepository;
+    private final ServiceEntityService serviceEntityService;
 
     @Transactional(readOnly = true)
     public List<SlaAlertDto> calculateAlerts() {
@@ -31,8 +33,13 @@ public class SlaAlertService {
         // 1. Service Visit SLAs
         List<Service> services = serviceRepository.findByActivoTrue();
         for (Service s : services) {
-            if (s.getFechaProximaVisitaLimite() != null) {
-                long diff = ChronoUnit.DAYS.between(today, s.getFechaProximaVisitaLimite());
+            LocalDate nextVisit = s.getFechaProximaVisitaLimite();
+            if (nextVisit == null && s.getFrecuenciaVisita() != null && s.getFrecuenciaVisita() != ServiceFrequency.A_DEMANDA) {
+                nextVisit = serviceEntityService.calculateNextVisit(s.getFechaUltimaVisita(), s.getFrecuenciaVisita());
+            }
+
+            if (nextVisit != null) {
+                long diff = ChronoUnit.DAYS.between(today, nextVisit);
                 int avisoDias = s.getDiasAvisoAlerta() != null ? s.getDiasAvisoAlerta() : 7;
 
                 if (diff < 0) {
@@ -46,7 +53,7 @@ public class SlaAlertService {
                             .clientRazonSocial(s.getClient() != null ? s.getClient().getRazonSocial() : null)
                             .serviceId(s.getId())
                             .serviceNombre(s.getNombre())
-                            .fechaLimite(s.getFechaProximaVisitaLimite())
+                            .fechaLimite(nextVisit)
                             .diasDiferencia(diff)
                             .accionSugerida("Agendar Visita Urgente")
                             .build());
@@ -61,7 +68,7 @@ public class SlaAlertService {
                             .clientRazonSocial(s.getClient() != null ? s.getClient().getRazonSocial() : null)
                             .serviceId(s.getId())
                             .serviceNombre(s.getNombre())
-                            .fechaLimite(s.getFechaProximaVisitaLimite())
+                            .fechaLimite(nextVisit)
                             .diasDiferencia(diff)
                             .accionSugerida("Crear Orden de Trabajo")
                             .build());

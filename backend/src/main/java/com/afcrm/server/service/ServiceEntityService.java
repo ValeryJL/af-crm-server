@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -102,19 +103,76 @@ public class ServiceEntityService {
     }
 
     public LocalDate calculateNextVisit(LocalDate lastVisit, ServiceFrequency frequency) {
-        if (lastVisit == null || frequency == null || frequency == ServiceFrequency.A_DEMANDA) {
+        if (frequency == null || frequency == ServiceFrequency.A_DEMANDA) {
             return null;
         }
-        return switch (frequency) {
-            case SEMANAL -> lastVisit.plusWeeks(1);
-            case QUINCENAL -> lastVisit.plusWeeks(2);
-            case MENSUAL -> lastVisit.plusMonths(1);
-            case BIMESTRAL -> lastVisit.plusMonths(2);
-            case TRIMESTRAL -> lastVisit.plusMonths(3);
-            case SEMESTRAL -> lastVisit.plusMonths(6);
-            case ANUAL -> lastVisit.plusYears(1);
-            default -> null;
-        };
+        LocalDate today = LocalDate.now();
+        if (lastVisit == null) {
+            return switch (frequency) {
+                case SEMANAL -> today.plusDays(3);
+                case QUINCENAL -> today.plusDays(7);
+                case MENSUAL -> today.withDayOfMonth(Math.min(28, today.lengthOfMonth()));
+                case BIMESTRAL -> today.plusMonths(1);
+                case TRIMESTRAL -> today.plusMonths(1);
+                case SEMESTRAL -> today.plusMonths(2);
+                case ANUAL -> today.plusMonths(3);
+                default -> today.plusDays(7);
+            };
+        }
+
+        switch (frequency) {
+            case MENSUAL -> {
+                int targetDay = Math.min(lastVisit.getDayOfMonth(), today.lengthOfMonth());
+                LocalDate targetThisMonth = today.withDayOfMonth(targetDay);
+                // Si ya fue visitado en este mes calendario (en o después del día objetivo), programar para el mes siguiente
+                if (lastVisit.getYear() == today.getYear() && lastVisit.getMonth() == today.getMonth() && !lastVisit.isBefore(targetThisMonth)) {
+                    LocalDate nextMonth = today.plusMonths(1);
+                    return nextMonth.withDayOfMonth(Math.min(targetDay, nextMonth.lengthOfMonth()));
+                }
+                return targetThisMonth;
+            }
+            case SEMANAL -> {
+                if (lastVisit.isAfter(today.minusDays(6))) {
+                    return lastVisit.plusWeeks(1);
+                }
+                LocalDate targetThisWeek = today.with(TemporalAdjusters.previousOrSame(lastVisit.getDayOfWeek()));
+                if (targetThisWeek.isBefore(today.minusDays(3))) {
+                    targetThisWeek = today.with(TemporalAdjusters.nextOrSame(lastVisit.getDayOfWeek()));
+                }
+                return targetThisWeek;
+            }
+            case QUINCENAL -> {
+                if (lastVisit.isAfter(today.minusDays(13))) {
+                    return lastVisit.plusWeeks(2);
+                }
+                int dayOfMonth = today.getDayOfMonth();
+                int day1 = Math.min(Math.min(lastVisit.getDayOfMonth(), 15), today.lengthOfMonth());
+                int day2 = Math.min(day1 + 14, today.lengthOfMonth());
+                if (dayOfMonth <= day1) {
+                    return today.withDayOfMonth(day1);
+                } else if (dayOfMonth <= day2) {
+                    return today.withDayOfMonth(day2);
+                } else {
+                    LocalDate nextMonth = today.plusMonths(1);
+                    return nextMonth.withDayOfMonth(Math.min(day1, nextMonth.lengthOfMonth()));
+                }
+            }
+            case BIMESTRAL -> {
+                return lastVisit.plusMonths(2);
+            }
+            case TRIMESTRAL -> {
+                return lastVisit.plusMonths(3);
+            }
+            case SEMESTRAL -> {
+                return lastVisit.plusMonths(6);
+            }
+            case ANUAL -> {
+                return lastVisit.plusYears(1);
+            }
+            default -> {
+                return lastVisit.plusMonths(1);
+            }
+        }
     }
 
     public ServiceDto toDto(Service s) {
@@ -122,12 +180,21 @@ public class ServiceEntityService {
         String slaStatus = "ON_TIME";
         Long diasParaVisita = null;
 
-        if (s.getFechaProximaVisitaLimite() != null) {
-            diasParaVisita = ChronoUnit.DAYS.between(today, s.getFechaProximaVisitaLimite());
+        LocalDate nextVisit = s.getFechaProximaVisitaLimite();
+        if (nextVisit == null && s.getFrecuenciaVisita() != null && s.getFrecuenciaVisita() != ServiceFrequency.A_DEMANDA) {
+            nextVisit = calculateNextVisit(s.getFechaUltimaVisita(), s.getFrecuenciaVisita());
+        }
+
+        if (s.getFrecuenciaVisita() == ServiceFrequency.A_DEMANDA) {
+            slaStatus = "A_DEMANDA";
+        } else if (nextVisit != null) {
+            diasParaVisita = ChronoUnit.DAYS.between(today, nextVisit);
             if (diasParaVisita < 0) {
                 slaStatus = "OVERDUE";
             } else if (diasParaVisita <= (s.getDiasAvisoAlerta() != null ? s.getDiasAvisoAlerta() : 7)) {
                 slaStatus = "UPCOMING";
+            } else {
+                slaStatus = "ON_TIME";
             }
         }
 
@@ -156,7 +223,7 @@ public class ServiceEntityService {
                 .frecuenciaVisita(s.getFrecuenciaVisita())
                 .diasAvisoAlerta(s.getDiasAvisoAlerta())
                 .fechaUltimaVisita(s.getFechaUltimaVisita())
-                .fechaProximaVisitaLimite(s.getFechaProximaVisitaLimite())
+                .fechaProximaVisitaLimite(nextVisit)
                 .notas(s.getNotas())
                 .activo(s.isActivo())
                 .clientId(s.getClient() != null ? s.getClient().getId() : null)
